@@ -31,9 +31,9 @@ func TestSetup(t *testing.T) {
 		t.Error("Test Failed - ZB Setup() init error")
 	}
 
-	zbConfig.AuthenticatedAPISupport = true
-	zbConfig.APIKey = apiKey
-	zbConfig.APISecret = apiSecret
+	zbConfig.API.AuthenticatedSupport = true
+	zbConfig.API.Credentials.Key = apiKey
+	zbConfig.API.Credentials.Secret = apiSecret
 
 	z.Setup(zbConfig)
 }
@@ -41,7 +41,7 @@ func TestSetup(t *testing.T) {
 func TestSpotNewOrder(t *testing.T) {
 	t.Parallel()
 
-	if z.APIKey == "" || z.APISecret == "" {
+	if !z.ValidateAPICredentials() {
 		t.Skip()
 	}
 
@@ -62,7 +62,7 @@ func TestSpotNewOrder(t *testing.T) {
 func TestCancelExistingOrder(t *testing.T) {
 	t.Parallel()
 
-	if z.APIKey == "" || z.APISecret == "" {
+	if !z.ValidateAPICredentials() {
 		t.Skip()
 	}
 
@@ -233,11 +233,7 @@ func TestFormatWithdrawPermissions(t *testing.T) {
 // Any tests below this line have the ability to impact your orders on the exchange. Enable canManipulateRealOrders to run them
 // ----------------------------------------------------------------------------------------------------------------------------
 func areTestAPIKeysSet() bool {
-	if z.APIKey != "" && z.APIKey != "Key" &&
-		z.APISecret != "" && z.APISecret != "Secret" {
-		return true
-	}
-	return false
+	return z.ValidateAPICredentials()
 }
 
 func TestSubmitOrder(t *testing.T) {
@@ -245,13 +241,15 @@ func TestSubmitOrder(t *testing.T) {
 	TestSetup(t)
 
 	if areTestAPIKeysSet() && !canManipulateRealOrders {
-		t.Skip(fmt.Sprintf("ApiKey: %s. Can place orders: %v", z.APIKey, canManipulateRealOrders))
+		t.Skipf("ApiKey: %s. Can place orders: %v", z.API.Credentials.Key, canManipulateRealOrders)
 	}
+
 	var pair = pair.CurrencyPair{
 		Delimiter:      "_",
 		FirstCurrency:  symbol.QTUM,
 		SecondCurrency: symbol.USDT,
 	}
+
 	response, err := z.SubmitOrder(pair, exchange.Buy, exchange.Market, 1, 10, "hi")
 	if areTestAPIKeysSet() && (err != nil || !response.IsOrderPlaced) {
 		t.Errorf("Order failed to be placed: %v", err)
@@ -325,7 +323,7 @@ func TestCancelAllExchangeOrders(t *testing.T) {
 }
 
 func TestGetAccountInfo(t *testing.T) {
-	if apiKey != "" || apiSecret != "" {
+	if z.ValidateAPICredentials() {
 		_, err := z.GetAccountInfo()
 		if err != nil {
 			t.Error("Test Failed - GetAccountInfo() error", err)
