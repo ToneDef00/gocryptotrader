@@ -60,10 +60,8 @@ func NewRouter(isREST bool) *mux.Router {
 			Route{"SaveAllSettings", "POST", "/config/all/save", RESTSaveAllSettings},
 			Route{"AllEnabledAccountInfo", "GET", "/exchanges/enabled/accounts/all", RESTGetAllEnabledAccountInfo},
 			Route{"AllActiveExchangesAndCurrencies", "GET", "/exchanges/enabled/latest/all", RESTGetAllActiveTickers},
-			Route{"IndividualExchangeAndCurrency", "GET", "/exchanges/{exchangeName}/latest/{currency}", RESTGetTicker},
 			Route{"GetPortfolio", "GET", "/portfolio/all", RESTGetPortfolio},
 			Route{"AllActiveExchangesAndOrderbooks", "GET", "/exchanges/orderbook/latest/all", RESTGetAllActiveOrderbooks},
-			Route{"IndividualExchangeOrderbook", "GET", "/exchanges/{exchangeName}/orderbook/latest/{currency}", RESTGetOrderbook},
 		}
 	} else {
 		listenAddr = Bot.Config.WebsocketServer.ListenAddress

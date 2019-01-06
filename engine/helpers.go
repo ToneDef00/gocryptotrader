@@ -224,14 +224,14 @@ func GetRelatableCurrencies(p pair.CurrencyPair, incOrig, incUSDT bool) []pair.C
 
 // GetSpecificOrderbook returns a specific orderbook given the currency,
 // exchangeName and assetType
-func GetSpecificOrderbook(currency, exchangeName string, assetType assets.AssetType) (orderbook.Base, error) {
+func GetSpecificOrderbook(pair pair.CurrencyPair, exchangeName string, assetType assets.AssetType) (orderbook.Base, error) {
 	var specificOrderbook orderbook.Base
 	var err error
 	for x := range Bot.Exchanges {
 		if Bot.Exchanges[x] != nil {
 			if Bot.Exchanges[x].GetName() == exchangeName {
 				specificOrderbook, err = Bot.Exchanges[x].FetchOrderbook(
-					pair.NewCurrencyPairFromString(currency),
+					pair,
 					assetType,
 				)
 				break
@@ -243,14 +243,14 @@ func GetSpecificOrderbook(currency, exchangeName string, assetType assets.AssetT
 
 // GetSpecificTicker returns a specific ticker given the currency,
 // exchangeName and assetType
-func GetSpecificTicker(currency, exchangeName string, assetType assets.AssetType) (ticker.Price, error) {
+func GetSpecificTicker(pair pair.CurrencyPair, exchangeName string, assetType assets.AssetType) (ticker.Price, error) {
 	var specificTicker ticker.Price
 	var err error
 	for x := range Bot.Exchanges {
 		if Bot.Exchanges[x] != nil {
 			if Bot.Exchanges[x].GetName() == exchangeName {
 				specificTicker, err = Bot.Exchanges[x].FetchTicker(
-					pair.NewCurrencyPairFromString(currency),
+					pair,
 					assetType,
 				)
 				break
@@ -529,4 +529,72 @@ func WithdrawCryptocurrencyFundsByExchange(exchName string, cryptocurrency pair.
 func FormatCurrency(p pair.CurrencyPair) pair.CurrencyItem {
 	return p.Display(Bot.Config.Currency.CurrencyPairFormat.Delimiter,
 		Bot.Config.Currency.CurrencyPairFormat.Uppercase)
+}
+
+// GetExchanges returns a list of loaded exchanges
+func GetExchanges(enabled bool) []string {
+	var exchanges []string
+	for x := range Bot.Exchanges {
+		if Bot.Exchanges[x].IsEnabled() && enabled {
+			exchanges = append(exchanges, Bot.Exchanges[x].GetName())
+			continue
+		}
+		exchanges = append(exchanges, Bot.Exchanges[x].GetName())
+	}
+	return exchanges
+}
+
+// GetAllActiveTickers returns all enabled exchange tickers
+func GetAllActiveTickers() []EnabledExchangeCurrencies {
+	var tickerData []EnabledExchangeCurrencies
+
+	for _, exch := range Bot.Exchanges {
+		if !exch.IsEnabled() {
+			continue
+		}
+
+		assets := exch.GetAssetTypes()
+		exchName := exch.GetName()
+		var exchangeTicker EnabledExchangeCurrencies
+		exchangeTicker.ExchangeName = exchName
+
+		for y := range assets {
+			currencies := exch.GetEnabledPairs(assets[y])
+			for z := range currencies {
+				tp, err := exch.FetchTicker(currencies[z], assets[y])
+				if err != nil {
+					log.Printf("Exchange %s failed to retrieve %s ticker. Err: %s", exchName,
+						currencies[z].Pair().String(),
+						err)
+					continue
+				}
+				exchangeTicker.ExchangeValues = append(exchangeTicker.ExchangeValues, tp)
+			}
+			tickerData = append(tickerData, exchangeTicker)
+		}
+	}
+	return tickerData
+}
+
+// GetAllEnabledExchangeAccountInfo returns all the current enabled exchanges
+func GetAllEnabledExchangeAccountInfo() AllEnabledExchangeAccounts {
+	var response AllEnabledExchangeAccounts
+	for _, individualBot := range Bot.Exchanges {
+		if individualBot != nil && individualBot.IsEnabled() {
+			if !individualBot.GetAuthenticatedAPISupport() {
+				if Bot.Settings.Verbose {
+					log.Printf("GetAllEnabledExchangeAccountInfo: Skippping %s due to disabled authenticated API support.", individualBot.GetName())
+				}
+				continue
+			}
+			individualExchange, err := individualBot.GetAccountInfo()
+			if err != nil {
+				log.Printf("Error encountered retrieving exchange account info for %s. Error %s",
+					individualBot.GetName(), err)
+				continue
+			}
+			response.Data = append(response.Data, individualExchange)
+		}
+	}
+	return response
 }

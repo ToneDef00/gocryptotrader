@@ -5,9 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/thrasher-/gocryptotrader/config"
-	"github.com/thrasher-/gocryptotrader/exchanges/assets"
 )
 
 // RESTfulJSONResponse outputs a JSON response of the response interface
@@ -54,31 +52,6 @@ func RESTSaveAllSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SetupExchanges()
-}
-
-// RESTGetOrderbook returns orderbook info for a given currency, exchange and
-// asset type
-func RESTGetOrderbook(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	currency := vars["currency"]
-	exchange := vars["exchangeName"]
-	assetType := vars["assetType"]
-
-	if assetType == "" {
-		assetType = assets.AssetTypeSpot.String()
-	}
-
-	response, err := GetSpecificOrderbook(currency, exchange, assets.AssetType(assetType))
-	if err != nil {
-		log.Printf("Failed to fetch orderbook for %s currency: %s\n", exchange,
-			currency)
-		return
-	}
-
-	err = RESTfulJSONResponse(w, r, response)
-	if err != nil {
-		RESTfulError(r.Method, err)
-	}
 }
 
 // GetAllActiveOrderbooks returns all enabled exchanges orderbooks
@@ -133,61 +106,6 @@ func RESTGetPortfolio(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// RESTGetTicker returns ticker info for a given currency, exchange and
-// asset type
-func RESTGetTicker(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	currency := vars["currency"]
-	exchName := vars["exchangeName"]
-	assetType := vars["assetType"]
-
-	if assetType == "" {
-		assetType = assets.AssetTypeSpot.String()
-	}
-	response, err := GetSpecificTicker(currency, exchName, assets.AssetType(assetType))
-	if err != nil {
-		log.Printf("Failed to fetch ticker for %s currency: %s\n", exchName,
-			currency)
-		return
-	}
-	err = RESTfulJSONResponse(w, r, response)
-	if err != nil {
-		RESTfulError(r.Method, err)
-	}
-}
-
-// GetAllActiveTickers returns all enabled exchange tickers
-func GetAllActiveTickers() []EnabledExchangeCurrencies {
-	var tickerData []EnabledExchangeCurrencies
-
-	for _, exch := range Bot.Exchanges {
-		if !exch.IsEnabled() {
-			continue
-		}
-
-		assets := exch.GetAssetTypes()
-		exchName := exch.GetName()
-		var exchangeTicker EnabledExchangeCurrencies
-		exchangeTicker.ExchangeName = exchName
-
-		for y := range assets {
-			currencies := exch.GetEnabledPairs(assets[y])
-			for z := range currencies {
-				tp, err := exch.FetchTicker(currencies[z], assets[y])
-				if err != nil {
-					log.Printf("Exchange %s failed to retrieve %s ticker. Err: %s", exchName,
-						currencies[z].Pair().String(),
-						err)
-					continue
-				}
-				exchangeTicker.ExchangeValues = append(exchangeTicker.ExchangeValues, tp)
-			}
-			tickerData = append(tickerData, exchangeTicker)
-		}
-	}
-	return tickerData
-}
-
 // RESTGetAllActiveTickers returns all active tickers
 func RESTGetAllActiveTickers(w http.ResponseWriter, r *http.Request) {
 	var response AllEnabledExchangeCurrencies
@@ -197,29 +115,6 @@ func RESTGetAllActiveTickers(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		RESTfulError(r.Method, err)
 	}
-}
-
-// GetAllEnabledExchangeAccountInfo returns all the current enabled exchanges
-func GetAllEnabledExchangeAccountInfo() AllEnabledExchangeAccounts {
-	var response AllEnabledExchangeAccounts
-	for _, individualBot := range Bot.Exchanges {
-		if individualBot != nil && individualBot.IsEnabled() {
-			if !individualBot.GetAuthenticatedAPISupport() {
-				if Bot.Settings.Verbose {
-					log.Printf("GetAllEnabledExchangeAccountInfo: Skippping %s due to disabled authenticated API support.", individualBot.GetName())
-				}
-				continue
-			}
-			individualExchange, err := individualBot.GetAccountInfo()
-			if err != nil {
-				log.Printf("Error encountered retrieving exchange account info for %s. Error %s",
-					individualBot.GetName(), err)
-				continue
-			}
-			response.Data = append(response.Data, individualExchange)
-		}
-	}
-	return response
 }
 
 // RESTGetAllEnabledAccountInfo via get request returns JSON response of account

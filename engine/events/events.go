@@ -61,7 +61,7 @@ type ConditionParams struct {
 
 // Event struct holds the event variables
 type Event struct {
-	ID        int
+	ID        int64
 	Exchange  string
 	Item      string
 	Condition ConditionParams
@@ -83,7 +83,7 @@ func SetComms(commsP *communications.Communications) {
 
 // Add adds an event to the Events chain and returns an index/eventID
 // and an error
-func Add(Exchange, Item string, Condition ConditionParams, CurrencyPair pair.CurrencyPair, Asset assets.AssetType, Action string) (int, error) {
+func Add(Exchange, Item string, Condition ConditionParams, CurrencyPair pair.CurrencyPair, Asset assets.AssetType, Action string) (int64, error) {
 	err := IsValidEvent(Exchange, Item, Condition, Action)
 	if err != nil {
 		return 0, err
@@ -94,7 +94,7 @@ func Add(Exchange, Item string, Condition ConditionParams, CurrencyPair pair.Cur
 	if len(Events) == 0 {
 		Event.ID = 0
 	} else {
-		Event.ID = len(Events) + 1
+		Event.ID = int64(len(Events) + 1)
 	}
 
 	Event.Exchange = Exchange
@@ -109,7 +109,7 @@ func Add(Exchange, Item string, Condition ConditionParams, CurrencyPair pair.Cur
 }
 
 // Remove deletes and event by its ID
-func Remove(EventID int) bool {
+func Remove(EventID int64) bool {
 	for i, x := range Events {
 		if x.ID == EventID {
 			Events = append(Events[:i], Events[i+1:]...)

@@ -279,6 +279,9 @@ func (e *Engine) Start() {
 
 	e.CryptocurrencyDepositAddresses = GetExchangeCryptocurrencyDepositAddresses()
 
+	go StartRPCServer()
+	go StartRPCRESTProxy()
+
 	if e.Settings.EnableRESTServer {
 		go StartRESTServer()
 	}
