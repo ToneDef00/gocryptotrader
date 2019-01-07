@@ -81,7 +81,7 @@ func (b *Binance) SetDefaults() {
 	b.AssetTypes = []string{ticker.Spot}
 	b.SupportsAutoPairUpdating = true
 	b.SupportsRESTTickerBatching = true
-	b.APIWithdrawPermissions = exchange.AutoWithdrawCrypto
+	b.APIWithdrawPermissions = exchange.AutoWithdrawCrypto | exchange.NoFiatWithdrawals
 	b.SetValues()
 	b.Requester = request.New(b.Name,
 		request.NewRateLimit(time.Second, binanceAuthRate),
@@ -740,7 +740,6 @@ func (b *Binance) WithdrawCrypto(asset, address, addressTag, name, amount string
 
 	return resp.ID, nil
 }
-
 
 //GetDepositAddressForCurrency retrieves the wallet address for a given currency
 func (b *Binance) GetDepositAddressForCurrency(currency string) error {
